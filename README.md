@@ -1,5 +1,5 @@
 # GateKeeper
-[![Go Reference](https://pkg.go.dev/badge/github.com/Vortex93/gate-keeper.svg)](https://pkg.go.dev/github.com/Vortex93/gate-keeper)
+[![Go Reference](https://pkg.go.dev/badge/github.com/Vortex93/gatekeeper.svg)](https://pkg.go.dev/github.com/Vortex93/gatekeeper)
 
 The `GateKeeper` package provides a concurrency control mechanism for Go applications. It combines features of mutexes, condition variables, and selective unlocking to offer fine-grained control over resource access among goroutines.
 
@@ -7,13 +7,13 @@ The `GateKeeper` package provides a concurrency control mechanism for Go applica
 
 To use the `GateKeeper` package in your Go project, simply run the following command:
 ```bash
-go get github.com/Vortex93/gate-keeper
+go get github.com/Vortex93/gatekeeper
 ```
 
 Then, import it in your Go files:
 
 ```go
-import "github.com/Vortex93/gate-keeper"
+import "github.com/Vortex93/gatekeeper"
 ```
 
 ## Usage
