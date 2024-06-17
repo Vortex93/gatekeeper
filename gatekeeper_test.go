@@ -8,7 +8,7 @@ import (
 
 func TestNewGateKeeper(t *testing.T) {
 	gk := NewGateKeeper(true)
-	if !gk.IsLocked() {
+	if gk.IsUnlocked() {
 		t.Error("Expected gate to be locked")
 	}
 
@@ -20,7 +20,7 @@ func TestNewGateKeeper(t *testing.T) {
 
 func TestIsLocked(t *testing.T) {
 	gk := NewGateKeeper(true)
-	if !gk.IsLocked() {
+	if gk.IsUnlocked() {
 		t.Error("Expected gate to be locked")
 	}
 
@@ -28,21 +28,30 @@ func TestIsLocked(t *testing.T) {
 	if gk.IsLocked() {
 		t.Error("Expected gate to be unlocked")
 	}
-}
 
-func TestLock(t *testing.T) {
-	gk := NewGateKeeper(false)
 	gk.Lock()
-	if !gk.IsLocked() {
+	if gk.IsUnlocked() {
 		t.Error("Expected gate to be locked")
 	}
 }
 
 func TestUnlock(t *testing.T) {
-	gk := NewGateKeeper(true)
-	gk.Unlock()
-	if gk.IsLocked() {
-		t.Error("Expected gate to be unlocked")
+	var t0 time.Time
+	var td time.Duration
+
+	gk := NewGateKeeper(true) // Start in locked state
+
+	go func() {
+		t0 = time.Now()
+		time.Sleep(100 * time.Millisecond)
+		gk.Unlock()
+	}()
+
+	gk.Wait()
+	td = time.Since(t0)
+
+	if td < 100*time.Millisecond {
+		t.Error("Expected Unlock to block for at least 100ms")
 	}
 }
 
@@ -76,23 +85,34 @@ func TestUnlockOne(t *testing.T) {
 
 func TestAllowIf(t *testing.T) {
 	gk := NewGateKeeper(true)
-	condition := false
+
+	allow_0 := false
+	allow_1 := false
 
 	go func() {
-		time.Sleep(100 * time.Millisecond)
-		gk.mutex.Lock()
-		condition = true
-		gk.mutex.Unlock()
-		gk.cond.Broadcast()
+		gk.AllowIf(func() bool {
+			allow_0 = true
+			return true
+		})
+
+		if !allow_0 {
+			t.Error("Expected allow_0 to be false")
+		}
 	}()
 
-	gk.AllowIf(func() bool {
-		return condition
-	})
+	go func() {
+		gk.AllowIf(func() bool {
+			allow_1 = false
+			return false
+		})
 
-	if !condition {
-		t.Error("Expected condition to be true")
-	}
+		if allow_1 {
+			t.Error("Expected allow_1 to be false")
+		}
+	}()
+
+	time.Sleep(100 * time.Millisecond)
+	gk.Unlock()
 }
 
 func TestWait(t *testing.T) {

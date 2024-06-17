@@ -1,3 +1,4 @@
+```markdown
 # GateKeeper
 [![Go Reference](https://pkg.go.dev/badge/github.com/Vortex93/gatekeeper.svg)](https://pkg.go.dev/github.com/Vortex93/gatekeeper)
 
@@ -74,7 +75,6 @@ var (
 	gk = gatekeeper.NewGateKeeper(true) // Initialize the GateKeeper in a locked state
 )
 
-
 func Producer() {
 	for {
 		// Simulate some work
@@ -103,8 +103,8 @@ func Consumer() {
 }
 
 func main() {
-    go Producer(gk)
-    go Consumer(gk)
+    go Producer()
+    go Consumer()
 
     // Let the main goroutine sleep to let producer and consumer run
     time.Sleep(10 * time.Second)
@@ -155,3 +155,44 @@ go func() {
 gk.Wait()
 fmt.Println("Gate fully open, all goroutines may proceed.")
 ```
+
+## Functions
+
+### `NewGateKeeper(locked bool) *GateKeeper`
+
+Initializes a new `GateKeeper`. If `locked` is true, the gate starts in a locked state.
+
+### `IsLocked() bool`
+
+Checks if the gate is in a locked state.
+
+### `Lock()`
+
+Sets the gate to a locked state, preventing goroutines from passing until it is unlocked.
+
+### `Unlock()`
+
+Sets the gate to an open state, allowing all waiting goroutines to proceed.
+
+### `UnlockOne()`
+
+Allows exactly one waiting goroutine to proceed, even if the gate is generally closed.
+
+### `AllowIf(predicate func() bool)`
+
+Lets a goroutine pass through the gate only if a specific condition is true. If the gate is open, the predicate is ignored and the goroutine is allowed to proceed.
+
+### `Wait()`
+
+Blocks the calling goroutine until the gate is fully opened.
+
+## Contributing
+
+Contributions are welcome! Please open an issue or submit a pull request on GitHub.
+
+## License
+
+This project is licensed under the MIT License.
+```
+
+This revised README.md file includes a detailed explanation of the updated functions and examples that match the current implementation of the `GateKeeper` package.
