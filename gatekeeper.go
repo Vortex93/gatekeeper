@@ -8,10 +8,10 @@ import (
 
 // GateKeeper controls access to a resource or section of code among multiple goroutines.
 type GateKeeper struct {
-	counter  atomic.Int64
-	open     atomic.Bool
-	mutex    sync.Mutex
-	cond    *sync.Cond
+	counter   atomic.Int64
+	open      atomic.Bool
+	mutex     sync.Mutex
+	cond     *sync.Cond
 }
 
 // NewGateKeeper initializes a new GateKeeper. If `locked` is true, the gate starts in a locked state.
