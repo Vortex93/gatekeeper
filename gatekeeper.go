@@ -1,25 +1,32 @@
 package gatekeeper
 
 import (
+	"log"
 	"sync"
 	"sync/atomic"
 )
 
 // GateKeeper controls access to a resource or section of code among multiple goroutines.
 type GateKeeper struct {
-	open           atomic.Bool
-	counter        atomic.Int64
-	mutex          sync.Mutex
-	cond           *sync.Cond
+	counter  atomic.Int64
+	open     atomic.Bool
+	mutex    sync.Mutex
+	cond    *sync.Cond
 }
 
 // NewGateKeeper initializes a new GateKeeper. If `locked` is true, the gate starts in a locked state.
 func NewGateKeeper(locked bool) *GateKeeper {
 	gk := &GateKeeper{}
-	gk.open.Store(!locked)
 	gk.cond = sync.NewCond(&gk.mutex)
 
-	if locked { gk.Lock() }
+	log.Println(gk.open.Load())
+
+	if locked { 
+		gk.Lock()
+	} else {
+		gk.Unlock()
+	}
+
 	return gk
 }
 
@@ -28,11 +35,16 @@ func (gk *GateKeeper) IsLocked() bool {
 	return !gk.open.Load()
 }
 
+// IsUnlocked checks if the gate is in an open state.
+func (gk *GateKeeper) IsUnlocked() bool {
+	return gk.open.Load()
+}
+
 // Lock sets the gate to a locked state, preventing goroutines from passing until it is unlocked.
 func (gk *GateKeeper) Lock() {
 	gk.mutex.Lock()
 	gk.open.Store(false)
-	gk.mutex.Unlock()
+	gk.mutex.Unlock() 
 }
 
 // Unlock sets the gate to an open state, allowing all waiting goroutines to proceed.
@@ -47,6 +59,7 @@ func (gk *GateKeeper) Unlock() {
 // It prioritizes one goroutine if multiple are waiting.
 func (gk *GateKeeper) UnlockOne() {
 	gk.mutex.Lock()
+	gk.counter.Add(1)
 	gk.cond.Signal()
 	gk.mutex.Unlock()
 }
@@ -70,10 +83,10 @@ func (gk *GateKeeper) Wait() {
 	for !gk.open.Load() {
 		gk.cond.Wait()
 
-		if !gk.open.Load() {
-			gk.open.Store(true)
+		if gk.counter.Load() > 0 {
+			gk.counter.Add(-1)
+			break
 		}
 	}
-	gk.open.Store(false)
 	gk.mutex.Unlock()
 }
