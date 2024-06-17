@@ -1,4 +1,3 @@
-```markdown
 # GateKeeper
 [![Go Reference](https://pkg.go.dev/badge/github.com/Vortex93/gatekeeper.svg)](https://pkg.go.dev/github.com/Vortex93/gatekeeper)
 
