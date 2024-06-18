@@ -1,7 +1,6 @@
 package gatekeeper
 
 import (
-	"log"
 	"sync"
 	"sync/atomic"
 )
@@ -18,8 +17,6 @@ type GateKeeper struct {
 func NewGateKeeper(locked bool) *GateKeeper {
 	gk := &GateKeeper{}
 	gk.cond = sync.NewCond(&gk.mutex)
-
-	log.Println(gk.open.Load())
 
 	if locked { 
 		gk.Lock()
