@@ -169,37 +169,100 @@ fmt.Println("Gate has been reset.")
 
 Initializes a new `GateKeeper`. If `locked` is true, the gate starts in a locked state.
 
+```go
+gk := gatekeeper.NewGateKeeper(true)
+fmt.Println("GateKeeper initialized in locked state.")
+```
+
 ### `IsLocked() bool`
 
 Checks if the gate is in a locked state.
+
+```go
+gk := gatekeeper.NewGateKeeper(true)
+if gk.IsLocked() {
+    fmt.Println("Gate is locked.")
+}
+```
 
 ### `IsUnlocked() bool`
 
 Checks if the gate is in an open state.
 
+```go
+gk := gatekeeper.NewGateKeeper(false)
+if gk.IsUnlocked() {
+    fmt.Println("Gate is unlocked.")
+}
+```
+
 ### `Lock()`
 
 Sets the gate to a locked state, preventing goroutines from passing until it is unlocked.
+
+```go
+gk := gatekeeper.NewGateKeeper(false)
+gk.Lock()
+fmt.Println("Gate is now locked.")
+```
 
 ### `Unlock()`
 
 Sets the gate to an open state, allowing all waiting goroutines to proceed.
 
+```go
+gk := gatekeeper.NewGateKeeper(true)
+gk.Unlock()
+fmt.Println("Gate is now open.")
+```
+
 ### `UnlockOne()`
 
 Allows exactly one waiting goroutine to proceed, even if the gate is generally closed.
+
+```go
+gk := gatekeeper.NewGateKeeper(true)
+go func() {
+    gk.UnlockOne() // Allow only one goroutine to pass.
+}()
+```
 
 ### `AllowIf(predicate func() bool)`
 
 Lets a goroutine pass through the gate only if a specific condition is true. If the gate is open, the predicate is ignored and the goroutine is allowed to proceed.
 
+```go
+gk := gatekeeper.NewGateKeeper(true)
+go func() {
+    gk.AllowIf(func() bool {
+        return true // Allow only goroutine whose condition is met.
+    })
+    fmt.Println("Condition met, gate opened for this goroutine.")
+}()
+```
+
 ### `Wait()`
 
 Blocks the calling goroutine until the gate is fully opened.
 
+```go
+gk := gatekeeper.NewGateKeeper(true)
+go func() {
+    gk.Unlock() // This will allow the `Wait` below to complete.
+}()
+gk.Wait()
+fmt.Println("Gate fully open, all goroutines may proceed.")
+```
+
 ### `Reset()`
 
 Resets the gate to its initial state, closing it and resetting the counter.
+
+```go
+gk := gatekeeper.NewGateKeeper(true)
+gk.Reset() // Resets the gate to its initial state
+fmt.Println("Gate has been reset.")
+```
 
 ## Contributing
 
