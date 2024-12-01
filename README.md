@@ -155,6 +155,14 @@ gk.Wait()
 fmt.Println("Gate fully open, all goroutines may proceed.")
 ```
 
+#### Using `Reset`
+
+```go
+gk := gatekeeper.NewGateKeeper(true)
+gk.Reset() // Resets the gate to its initial state
+fmt.Println("Gate has been reset.")
+```
+
 ## Functions
 
 ### `NewGateKeeper(locked bool) *GateKeeper`
@@ -164,6 +172,10 @@ Initializes a new `GateKeeper`. If `locked` is true, the gate starts in a locked
 ### `IsLocked() bool`
 
 Checks if the gate is in a locked state.
+
+### `IsUnlocked() bool`
+
+Checks if the gate is in an open state.
 
 ### `Lock()`
 
@@ -185,6 +197,10 @@ Lets a goroutine pass through the gate only if a specific condition is true. If 
 
 Blocks the calling goroutine until the gate is fully opened.
 
+### `Reset()`
+
+Resets the gate to its initial state, closing it and resetting the counter.
+
 ## Contributing
 
 Contributions are welcome! Please open an issue or submit a pull request on GitHub.
@@ -192,6 +208,3 @@ Contributions are welcome! Please open an issue or submit a pull request on GitH
 ## License
 
 This project is licensed under the MIT License.
-```
-
-This revised README.md file includes a detailed explanation of the updated functions and examples that match the current implementation of the `GateKeeper` package.
