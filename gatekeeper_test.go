@@ -60,7 +60,7 @@ func TestUnlockOne(t *testing.T) {
 	var wg sync.WaitGroup
 
 	for i := 0; i < 100; i++ {
-		wg.Add(1)	
+		wg.Add(1)
 
 		go func(i int) {
 			defer wg.Done()
@@ -68,7 +68,7 @@ func TestUnlockOne(t *testing.T) {
 		}(i)
 	}
 
-	
+
 	time.Sleep(100 * time.Millisecond)
 	gk.UnlockOne()
 	gk.UnlockOne()
@@ -90,7 +90,7 @@ func TestAllowIf(t *testing.T) {
 	allow_1 := false
 
 	go func() {
-		gk.AllowIf(func() bool {
+		gk.SkipIf(func() bool {
 			allow_0 = true
 			return true
 		})
@@ -101,7 +101,7 @@ func TestAllowIf(t *testing.T) {
 	}()
 
 	go func() {
-		gk.AllowIf(func() bool {
+		gk.SkipIf(func() bool {
 			allow_1 = false
 			return false
 		})
