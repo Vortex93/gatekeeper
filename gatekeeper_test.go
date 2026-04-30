@@ -1,7 +1,6 @@
 package gatekeeper
 
 import (
-	"sync"
 	"testing"
 	"time"
 )
@@ -36,83 +35,106 @@ func TestIsLocked(t *testing.T) {
 }
 
 func TestUnlock(t *testing.T) {
-	var t0 time.Time
-	var td time.Duration
-
 	gk := NewGateKeeper(true) // Start in locked state
 
 	go func() {
-		t0 = time.Now()
 		time.Sleep(100 * time.Millisecond)
 		gk.Unlock()
 	}()
 
+	start := time.Now()
 	gk.Wait()
-	td = time.Since(t0)
 
-	if td < 100*time.Millisecond {
+	if time.Since(start) < 100*time.Millisecond {
 		t.Error("Expected Unlock to block for at least 100ms")
 	}
 }
 
 func TestUnlockOne(t *testing.T) {
 	gk := NewGateKeeper(true)
-	var wg sync.WaitGroup
+	started := make(chan struct{}, 3)
+	passed := make(chan struct{}, 3)
 
-	for i := 0; i < 100; i++ {
-		wg.Add(1)	
-
-		go func(i int) {
-			defer wg.Done()
+	for i := 0; i < 3; i++ {
+		go func() {
+			started <- struct{}{}
 			gk.Wait()
-		}(i)
+			passed <- struct{}{}
+		}()
 	}
 
-	
-	time.Sleep(100 * time.Millisecond)
-	gk.UnlockOne()
-	gk.UnlockOne()
-	gk.UnlockOne()
-	time.Sleep(100 * time.Millisecond)
-	if !gk.IsLocked() {
-		t.Error("Expected gate to be locked after letting one goroutine through")
+	for i := 0; i < 3; i++ {
+		<-started
 	}
 
-	time.Sleep(1 * time.Second)
-	gk.Unlock()
-	wg.Wait()
+	time.Sleep(100 * time.Millisecond)
+
+	for i := 1; i <= 3; i++ {
+		gk.UnlockOne()
+
+		select {
+		case <-passed:
+		case <-time.After(250 * time.Millisecond):
+			t.Fatalf("Expected UnlockOne #%d to release one goroutine", i)
+		}
+
+		select {
+		case <-passed:
+			t.Fatalf("Expected UnlockOne #%d to release only one goroutine", i)
+		case <-time.After(100 * time.Millisecond):
+		}
+
+		if !gk.IsLocked() {
+			t.Fatal("Expected gate to remain locked after UnlockOne")
+		}
+	}
 }
 
 func TestAllowIf(t *testing.T) {
-	gk := NewGateKeeper(true)
+	t.Run("predicate true", func(t *testing.T) {
+		gk := NewGateKeeper(true)
+		allow0 := false
 
-	allow_0 := false
-	allow_1 := false
-
-	go func() {
 		gk.AllowIf(func() bool {
-			allow_0 = true
+			allow0 = true
 			return true
 		})
 
-		if !allow_0 {
-			t.Error("Expected allow_0 to be false")
+		if !allow0 {
+			t.Fatal("Expected allow_0 to be true")
 		}
-	}()
+	})
 
-	go func() {
-		gk.AllowIf(func() bool {
-			allow_1 = false
-			return false
-		})
+	t.Run("predicate false waits", func(t *testing.T) {
+		gk := NewGateKeeper(true)
+		allow1 := false
+		done := make(chan struct{})
 
-		if allow_1 {
-			t.Error("Expected allow_1 to be false")
+		go func() {
+			gk.AllowIf(func() bool {
+				return allow1
+			})
+			close(done)
+		}()
+
+		select {
+		case <-done:
+			t.Fatal("Expected AllowIf to wait while predicate is false and gate is locked")
+		case <-time.After(100 * time.Millisecond):
 		}
-	}()
 
-	time.Sleep(100 * time.Millisecond)
-	gk.Unlock()
+		gk.Unlock()
+
+		select {
+		case <-done:
+		case <-time.After(100 * time.Millisecond):
+			t.Fatal("Expected AllowIf to return after Unlock")
+		}
+
+		if allow1 {
+			t.Fatal("Expected allow_1 to be false")
+		}
+	})
 }
 
 func TestWait(t *testing.T) {
@@ -129,5 +151,63 @@ func TestWait(t *testing.T) {
 
 	if duration < 100*time.Millisecond {
 		t.Error("Expected Wait to block for at least 100ms")
+	}
+}
+
+func TestWaitConsumesStoredPermit(t *testing.T) {
+	gk := NewGateKeeper(true)
+	gk.UnlockOne()
+
+	done := make(chan struct{})
+	go func() {
+		gk.Wait()
+		close(done)
+	}()
+
+	select {
+	case <-done:
+	case <-time.After(100 * time.Millisecond):
+		t.Fatal("Expected Wait to consume a stored UnlockOne permit")
+	}
+
+	if !gk.IsLocked() {
+		t.Fatal("Expected gate to remain locked after consuming a stored permit")
+	}
+}
+
+func TestTryWait(t *testing.T) {
+	gk := NewGateKeeper(true)
+
+	if gk.TryWait() {
+		t.Fatal("Expected TryWait to fail while the gate is locked")
+	}
+
+	gk.UnlockOne()
+	if !gk.TryWait() {
+		t.Fatal("Expected TryWait to consume a stored UnlockOne permit")
+	}
+
+	if gk.TryWait() {
+		t.Fatal("Expected TryWait to fail after the stored permit is consumed")
+	}
+
+	gk.Unlock()
+	if !gk.TryWait() {
+		t.Fatal("Expected TryWait to succeed while the gate is open")
+	}
+
+	gk.Lock()
+	if gk.TryWait() {
+		t.Fatal("Expected full Unlock to clear stored single-use permits")
+	}
+}
+
+func TestResetClearsStoredPermit(t *testing.T) {
+	gk := NewGateKeeper(true)
+	gk.UnlockOne()
+	gk.Reset()
+
+	if gk.TryWait() {
+		t.Fatal("Expected Reset to clear stored single-use permits")
 	}
 }

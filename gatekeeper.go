@@ -51,40 +51,64 @@ func (gk *GateKeeper) Lock() {
 func (gk *GateKeeper) Unlock() {
 	gk.mutex.Lock()
 	gk.open = true
+	gk.counter = 0
 	gk.cond.Broadcast()
 	gk.mutex.Unlock()
 }
 
-// UnlockOne allows exactly one waiting goroutine to proceed, even if the gate is generally closed.
-// It prioritizes one goroutine if multiple are waiting.
+// UnlockOne allows exactly one goroutine to proceed without fully opening the gate.
+// If no goroutine is waiting yet, the next waiter consumes the permit.
 func (gk *GateKeeper) UnlockOne() {
 	gk.mutex.Lock()
-	gk.counter++
-	gk.cond.Signal()
+	if !gk.open {
+		gk.counter++
+		gk.cond.Signal()
+	}
 	gk.mutex.Unlock()
 }
 
-// AllowIf lets a goroutine pass through the gate only if a specific condition is true.
-// The condition is defined by the predicate function provided as an argument.
-// If the gate is open, the predicate is ignored and the goroutine is allowed to proceed.
+// TryWait attempts to pass through the gate without blocking.
+// It returns true when the gate is open or a single-use UnlockOne permit is available.
+func (gk *GateKeeper) TryWait() bool {
+	gk.mutex.Lock()
+	defer gk.mutex.Unlock()
+
+	if gk.open {
+		return true
+	}
+
+	if gk.counter == 0 {
+		return false
+	}
+
+	gk.counter--
+	return true
+}
+
+// AllowIf lets a goroutine proceed immediately when the gate is already passable
+// or when the provided predicate returns true. Otherwise it waits.
 func (gk *GateKeeper) AllowIf(predicate func() bool) {
+	if gk.TryWait() {
+		return
+	}
+
 	if predicate() {
 		return
 	}
+
 	gk.Wait()
 }
 
-// Wait blocks the calling goroutine until the gate is fully opened.
-// It is useful when a goroutine needs to wait indefinitely until unrestricted access is allowed.
+// Wait blocks the calling goroutine until the gate is opened or a single-use permit becomes available.
 func (gk *GateKeeper) Wait() {
 	gk.mutex.Lock()
 	defer gk.mutex.Unlock()
-	for !gk.open {
+	for !gk.open && gk.counter == 0 {
 		gk.cond.Wait()
-		if gk.counter > 0 {
-			gk.counter--
-			break
-		}
+	}
+
+	if gk.counter > 0 {
+		gk.counter--
 	}
 }
 

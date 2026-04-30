@@ -187,15 +187,19 @@ Sets the gate to an open state, allowing all waiting goroutines to proceed.
 
 ### `UnlockOne()`
 
-Allows exactly one waiting goroutine to proceed, even if the gate is generally closed.
+Allows exactly one goroutine to proceed without fully opening the gate. If no goroutine is waiting yet, the next waiter consumes the permit.
+
+### `TryWait() bool`
+
+Attempts to pass through the gate without blocking. Returns true if the gate is open or a single-use permit is available.
 
 ### `AllowIf(predicate func() bool)`
 
-Lets a goroutine pass through the gate only if a specific condition is true. If the gate is open, the predicate is ignored and the goroutine is allowed to proceed.
+Lets a goroutine proceed immediately when the gate is already passable or when a specific condition is true. Otherwise it waits.
 
 ### `Wait()`
 
-Blocks the calling goroutine until the gate is fully opened.
+Blocks the calling goroutine until the gate is fully opened or a single-use permit becomes available.
 
 ### `Reset()`
 
