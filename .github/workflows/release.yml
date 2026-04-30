@@ -1,0 +1,91 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+
+      - name: Run tests
+        run: go test ./...
+
+      - name: Build module
+        run: go build ./...
+
+  package:
+    needs: verify
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Build source archives
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          VERSION="${GITHUB_REF_NAME#v}"
+          mkdir -p dist
+
+          git archive --format=tar.gz --prefix="gatekeeper_${VERSION}/" -o "dist/gatekeeper_${VERSION}_source.tar.gz" HEAD
+          git archive --format=zip --prefix="gatekeeper_${VERSION}/" -o "dist/gatekeeper_${VERSION}_source.zip" HEAD
+
+      - name: Upload release artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: release-source
+          path: dist/*
+          if-no-files-found: error
+
+  release:
+    needs: package
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - name: Download release artifacts
+        uses: actions/download-artifact@v4
+        with:
+          pattern: release-*
+          path: dist
+          merge-multiple: true
+
+      - name: Generate checksums
+        shell: bash
+        run: |
+          set -euo pipefail
+          shopt -s nullglob
+
+          cd dist
+          files=( *.tar.gz *.zip )
+
+          if [ "${#files[@]}" -eq 0 ]; then
+            echo "No release archives found" >&2
+            exit 1
+          fi
+
+          sha256sum "${files[@]}" > checksums.txt
+
+      - name: Create GitHub release
+        uses: softprops/action-gh-release@v2
+        with:
+          name: ${{ github.ref_name }}
+          generate_release_notes: true
+          files: dist/*

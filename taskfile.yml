@@ -1,0 +1,33 @@
+version: "3"
+
+tasks:
+  default:
+    desc: List all available tasks
+    cmds:
+      - task --list
+
+  build:
+    desc: Build all packages in the module
+    cmds:
+      - go build ./...
+
+  test:
+    desc: Run all tests
+    cmds:
+      - go test ./...
+
+  release:
+    desc: Create and push a version tag to trigger the GitHub release workflow
+    vars:
+      VERSION: '{{default "" .VERSION}}'
+    preconditions:
+      - sh: test -n "{{.VERSION}}"
+        msg: "Usage: task release VERSION=0.1.0"
+      - sh: '! git rev-parse "v{{.VERSION}}" >/dev/null 2>&1'
+        msg: "Tag v{{.VERSION}} already exists locally"
+      - sh: '! git ls-remote --exit-code --tags origin "refs/tags/v{{.VERSION}}" >/dev/null 2>&1'
+        msg: "Tag v{{.VERSION}} already exists on origin"
+    cmds:
+      - task: test
+      - git tag "v{{.VERSION}}"
+      - git push origin "v{{.VERSION}}"
