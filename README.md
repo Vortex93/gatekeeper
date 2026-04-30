@@ -1,4 +1,6 @@
 # GateKeeper
+
+[![CI](https://github.com/Vortex93/gatekeeper/actions/workflows/ci.yml/badge.svg)](https://github.com/Vortex93/gatekeeper/actions/workflows/ci.yml)
 [![Go Reference](https://pkg.go.dev/badge/github.com/Vortex93/gatekeeper.svg)](https://pkg.go.dev/github.com/Vortex93/gatekeeper)
 
 The `GateKeeper` package provides a concurrency control mechanism for Go applications. It combines features of mutexes, condition variables, and selective unlocking to offer fine-grained control over resource access among goroutines.
@@ -155,6 +157,22 @@ gk.Wait()
 fmt.Println("Gate fully open, all goroutines may proceed.")
 ```
 
+#### Using `TryWait`
+
+```go
+gk := gatekeeper.NewGateKeeper(true)
+
+if !gk.TryWait() {
+    fmt.Println("Gate is still locked.")
+}
+
+gk.UnlockOne()
+
+if gk.TryWait() {
+    fmt.Println("Consumed a single-use permit without blocking.")
+}
+```
+
 #### Using `Reset`
 
 ```go
@@ -205,10 +223,29 @@ Blocks the calling goroutine until the gate is fully opened or a single-use perm
 
 Resets the gate to its initial state, closing it and resetting the counter.
 
+## Development
+
+Local task shortcuts:
+
+```bash
+task build
+task test
+task race
+task check
+```
+
+Maintainers can create a release with:
+
+```bash
+task release VERSION=0.1.8
+```
+
+That task runs tests, creates the `v0.1.8` tag, and pushes it to GitHub. The release workflow then publishes source archives and checksums.
+
 ## Contributing
 
-Contributions are welcome! Please open an issue or submit a pull request on GitHub.
+Guidelines live in [`CONTRIBUTIONS.md`](./CONTRIBUTIONS.md).
 
 ## License
 
-This project is licensed under the MIT License.
+This project is licensed under the [MIT License](./LICENSE).

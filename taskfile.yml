@@ -16,6 +16,18 @@ tasks:
     cmds:
       - go test ./...
 
+  race:
+    desc: Run tests with the race detector
+    cmds:
+      - go test -race ./...
+
+  check:
+    desc: Run build and test checks
+    cmds:
+      - task: build
+      - task: test
+      - task: race
+
   release:
     desc: Create and push a version tag to trigger the GitHub release workflow
     vars:

@@ -14,12 +14,13 @@ jobs:
 
     steps:
       - name: Check out repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6.0.2
 
       - name: Set up Go
-        uses: actions/setup-go@v5
+        uses: actions/setup-go@v6.4.0
         with:
           go-version-file: go.mod
+          cache: false
 
       - name: Run tests
         run: go test ./...
@@ -33,7 +34,7 @@ jobs:
 
     steps:
       - name: Check out repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6.0.2
 
       - name: Build source archives
         shell: bash
@@ -47,7 +48,7 @@ jobs:
           git archive --format=zip --prefix="gatekeeper_${VERSION}/" -o "dist/gatekeeper_${VERSION}_source.zip" HEAD
 
       - name: Upload release artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7.0.1
         with:
           name: release-source
           path: dist/*
@@ -61,7 +62,7 @@ jobs:
 
     steps:
       - name: Download release artifacts
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8.0.1
         with:
           pattern: release-*
           path: dist
@@ -84,7 +85,7 @@ jobs:
           sha256sum "${files[@]}" > checksums.txt
 
       - name: Create GitHub release
-        uses: softprops/action-gh-release@v2
+        uses: softprops/action-gh-release@v3.0.0
         with:
           name: ${{ github.ref_name }}
           generate_release_notes: true
