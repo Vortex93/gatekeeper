@@ -4,7 +4,7 @@ tasks:
   default:
     desc: List all available tasks
     cmds:
-      - task --list
+      - task --list-all
 
   build:
     desc: Build all packages in the module
@@ -43,3 +43,8 @@ tasks:
       - task: test
       - git tag "v{{.VERSION}}"
       - git push origin "v{{.VERSION}}"
+
+  deploy:
+    desc: Alias for release
+    cmds:
+      - task release VERSION={{.VERSION}}
